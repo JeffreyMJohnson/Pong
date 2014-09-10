@@ -3,18 +3,30 @@
 
 const int SCREEN_WIDTH = 1024;
 const int SCREEN_HEIGHT = 768;
-const float PLAYER_SPEED = 100.0f;
+const float PLAYER_SPEED = 1500.0f;
 const float PLAYER_HEIGHT = 100.0f;
 const float PLAYER_WIDTH = 20.0f;
 const float PLAYER1_XPOS = 100.0F;
 const float PLAYER1_YPOS = SCREEN_HEIGHT / 2;
 const float PLAYER2_XPOS = SCREEN_WIDTH - 100;
 const float PLAYER2_YPOS = SCREEN_HEIGHT / 2;
+const float PLAYER1_SCORE_POSX = SCREEN_WIDTH / 2 - 10.0f;
+const float PLAYER1_SCORE_POSY = SCREEN_HEIGHT - 50.0f;
+const float PLAYER2_SCORE_POSX = SCREEN_WIDTH / 2 + 10.0f;
+const float PLAYER2_SCORE_POSY = PLAYER1_SCORE_POSY;
+
+
+
 
 const char* GAME_TITLE = "Pong Dong";
 const char* PLAYER_IMAGE_LOCATION = "./images/pong_paddle.png";
+const char* PLAYER1_SCORE = "0";
+const char* PLAYER2_SCORE = "0";
+
 
 void InitializePlayers();
+
+void DrawUI();
 
 struct Player
 {
@@ -59,6 +71,16 @@ struct Player
 				y = SCREEN_HEIGHT - (height / 2);
 			}
 		}
+
+		if (IsKeyDown(moveDownKey))
+		{
+			y -= a_deltaTime * speed;
+			if (y < height / 2)
+			{
+				y = height / 2;
+			}
+		}
+		MoveSprite(spriteId, x, y);
 	}
 };
 
@@ -81,20 +103,18 @@ int main( int argc, char* argv[] )
     //Game Loop
     do
 	{
+		ClearScreen();
 		float deltaTime = GetDeltaTime();
-		/*xPos += direction *1;
-		if (xPos >= maxWidth || xPos< 0)
-		{
-			direction *= -1;
-		}
-		MoveSprite(myTextureHandle, xPos, yPos);
-        DrawSprite(myTextureHandle);*/
+		
+
 		player1.Move(deltaTime);
+		player2.Move(deltaTime);
 		DrawSprite(player1.spriteId);
 		DrawSprite(player2.spriteId);
 
+		DrawUI();
 
-        ClearScreen();
+        
 
     } while(!FrameworkUpdate());
 
@@ -115,11 +135,22 @@ void InitializePlayers()
 	player2.setSize(PLAYER_WIDTH, PLAYER_HEIGHT);
 	player1.speed = PLAYER_SPEED;
 	
-	//TODO left off here moving not working
+	
 	//set up to numpad 8 (328)
 	//set down to numpad 2 (322)
-	player1.setMoveKeys('O', '.');
+	player2.setMoveKeys(328, 322);
+	player2.speed = PLAYER_SPEED;
 	player2.spriteId = CreateSprite(PLAYER_IMAGE_LOCATION, player2.width, player2.height, true);
 	player2.setPosition(PLAYER2_XPOS, PLAYER2_YPOS);
 	MoveSprite(player2.spriteId, player2.x, player2.y);
+}
+
+
+void DrawUI()
+{
+	DrawLine(SCREEN_WIDTH / 2, SCREEN_HEIGHT, SCREEN_WIDTH / 2, 0);
+	DrawLine(SCREEN_WIDTH / 2 - 1, SCREEN_HEIGHT, SCREEN_WIDTH / 2 - 1, 0);
+	DrawLine(SCREEN_WIDTH / 2 + 1, SCREEN_HEIGHT, SCREEN_WIDTH / 2 + 1, 0);
+
+	DrawString(PLAYER1_SCORE, PLAYER1_SCORE_POSX, PLAYER1_SCORE_POSY);
 }
