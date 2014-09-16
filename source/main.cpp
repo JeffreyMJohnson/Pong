@@ -19,10 +19,11 @@ const float PLAYER1_SCORE_POSY = SCREEN_HEIGHT - 30.0f;
 const float PLAYER2_SCORE_POSX = SCREEN_WIDTH / 2 + 100.0f;
 const float PLAYER2_SCORE_POSY = PLAYER1_SCORE_POSY;
 const int CENTER_LINE_WIDTH = 5;
-const float BALL_SPEED = 100.0f;
+const float BALL_SPEED = 200.0f;
 const float BALL_WIDTH = PLAYER_WIDTH;
 const float BALL_HEIGHT = 25;
 const int ESC_KEYCODE = 256;
+const float SERVING_TIME_DELAY = 2.0f;
 
 const char* GAME_TITLE = "Pong Dong";
 const char* PLAYER_IMAGE_LOCATION = "./images/pong_paddle.png";
@@ -32,6 +33,7 @@ const char* PLAYER2_SCORE = "0";
 const char* MENU_TEXT_NEW_GAME = "(S)tart a New Game";
 const char* MENU_TEXT_HIGH_SCORE = "(D)isplay High Scores";
 const char* MENU_TEXT_QUIT = "(Q)uit Game";
+
 
 enum DIRECTION
 {
@@ -531,7 +533,7 @@ void ServeBall(float &a_timer)
 	{
 		DrawString("Ready!", SCREEN_WIDTH / 2 - 50.0f, SCREEN_HEIGHT / 2);
 		DrawGameUI();
-		if (a_timer > 3.0f)
+		if (a_timer > SERVING_TIME_DELAY)
 		{
 			//set balls xDirection
 			if (player1.score == player2.score)
