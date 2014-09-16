@@ -139,7 +139,7 @@ struct Player
 	{
 		//char result[3];
 		itoa(score, a_result, 10);
-		std::cout << a_result << std::endl;
+		//std::cout << a_result << std::endl;
 		//return result;
 	}
 };
@@ -303,6 +303,9 @@ int main(int argc, char* argv[])
 
 	SetBackgroundColour(SColour(0, 0, 0, 255));
 
+	//variable for pausing the serve screen
+	float serveTimer = 0.0f;
+
 	InitializeGame();
 
 	//Game Loop
@@ -320,9 +323,63 @@ int main(int argc, char* argv[])
 			switch (currentPlayState)
 			{
 			case SERVE:
-				currentPlayState = ROUND;
+
+				if (player1.score > 10 || player2.score > 10)
+				{
+					currentGameState = WIN;
+				}
+				else
+				{
+					DrawString("Ready!", SCREEN_WIDTH / 2 - 50.0f, SCREEN_HEIGHT / 2);
+					DrawUI();
+					if (serveTimer > 3.0f)
+					{
+						//set balls xDirection
+						if (player1.score == player2.score)
+						{
+							ball.xDirection = GetRandXDirection();
+						}
+						else //flip ball xdirection
+						{
+							ball.SwapDirection(ball.xDirection);
+						}
+
+						//set ball yDirection to random
+						ball.yDirection = GetRandomYDirection();
+
+						//move ball to center
+						int x = SCREEN_WIDTH / 2;
+						int y = rand() % SCREEN_HEIGHT;
+						//see if ball is above or below the horizontal half line, this is to check if the ball is out of bounds 
+						//to start with
+						if (y < SCREEN_HEIGHT / 2)
+						{
+							if (y < ball.height)
+							{
+								y = ball.height;
+							}
+						}
+						else
+						{
+							if (y > SCREEN_HEIGHT - ball.height)
+							{
+								y = SCREEN_HEIGHT - ball.height;
+							}
+						}
+						ball.SetPosition(x, y);
+						MoveSprite(ball.spriteID, ball.x, ball.y);
+						currentPlayState = ROUND;
+					}
+					else
+					{
+						serveTimer += GetDeltaTime();
+					}
+
+				}
+
 				break;
 			case ROUND:
+				serveTimer = 0.0f;
 				Update();
 				Draw();
 				break;
@@ -331,6 +388,9 @@ int main(int argc, char* argv[])
 
 			break;
 		case HIGH_SCORE:
+			break;
+		case WIN:
+			DrawString("You Win!", SCREEN_WIDTH / 2 - 100.0f, SCREEN_HEIGHT / 2);
 			break;
 		case QUIT:
 			break;
@@ -378,9 +438,11 @@ void DrawUI()
 {
 	drawCenterLine();
 	char player1Score[3];
+	char player2Score[3];
 	player1.GetScore(player1Score);
-	DrawString(player1Score , PLAYER1_SCORE_POSX, PLAYER1_SCORE_POSY);
-	DrawString("0", PLAYER2_SCORE_POSX, PLAYER2_SCORE_POSY);
+	player2.GetScore(player2Score);
+	DrawString(player1Score, PLAYER1_SCORE_POSX, PLAYER1_SCORE_POSY);
+	DrawString(player2Score, PLAYER2_SCORE_POSX, PLAYER2_SCORE_POSY);
 }
 
 void drawCenterLine()
@@ -469,7 +531,7 @@ DIRECTION GetRandomYDirection()
 {
 	srand(time(nullptr));
 	int dir = rand() % 2 + 2;
-	std::cout << "dir: " << dir << std::endl;
+	
 	switch (dir)
 	{
 	case 2:
