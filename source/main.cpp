@@ -3,6 +3,8 @@
 #include <time.h>
 #include <string>
 
+using namespace std;
+
 const int SCREEN_WIDTH = 1024;
 const int SCREEN_HEIGHT = 768;
 const float PLAYER_SPEED = 1500.0f;
@@ -20,12 +22,16 @@ const int CENTER_LINE_WIDTH = 5;
 const float BALL_SPEED = 100.0f;
 const float BALL_WIDTH = PLAYER_WIDTH;
 const float BALL_HEIGHT = 25;
+const int ESC_KEYCODE = 256;
 
 const char* GAME_TITLE = "Pong Dong";
 const char* PLAYER_IMAGE_LOCATION = "./images/pong_paddle.png";
-//const char* CENTER_LINE_IMAGE_LOCATION = "./images/crate_sideup.png";
+const char* FONT_PATH = "./fonts/invaders.fnt";
 const char* PLAYER1_SCORE = "0";
 const char* PLAYER2_SCORE = "0";
+const char* MENU_TEXT_NEW_GAME = "(S)tart a New Game";
+const char* MENU_TEXT_HIGH_SCORE = "(D)isplay High Scores";
+const char* MENU_TEXT_QUIT = "(Q)uit Game";
 
 enum DIRECTION
 {
@@ -58,16 +64,21 @@ void InitializeGame();
 
 void Update();
 
-void Draw();
+void DrawGame();
 
 void InitializePlayers();
 
-void DrawUI();
+void DrawGameUI();
 
 void drawCenterLine();
 
 void InitializeBall();
 
+void ServeBall(float &a_timer);
+
+void DrawMenu();
+
+void HandleMenuInput();
 
 
 DIRECTION GetRandXDirection();
@@ -299,9 +310,13 @@ Ball ball;
 
 int main(int argc, char* argv[])
 {
+	bool quitGame = false;
 	Initialise(SCREEN_WIDTH, SCREEN_HEIGHT, false, GAME_TITLE);
 
 	SetBackgroundColour(SColour(0, 0, 0, 255));
+
+	AddFont(FONT_PATH);
+
 
 	//variable for pausing the serve screen
 	float serveTimer = 0.0f;
@@ -312,93 +327,58 @@ int main(int argc, char* argv[])
 	do
 	{
 		ClearScreen();
-
+		SetFont(FONT_PATH);
+		string winner = "YOU WIN ";
 		//implement gamestates
 		switch (currentGameState)
 		{
 		case MENU:
+			DrawMenu();
+			HandleMenuInput();
 			break;
 		case PLAY:
 			//implement play states
 			switch (currentPlayState)
 			{
 			case SERVE:
-
-				if (player1.score > 10 || player2.score > 10)
-				{
-					currentGameState = WIN;
-				}
-				else
-				{
-					DrawString("Ready!", SCREEN_WIDTH / 2 - 50.0f, SCREEN_HEIGHT / 2);
-					DrawUI();
-					if (serveTimer > 3.0f)
-					{
-						//set balls xDirection
-						if (player1.score == player2.score)
-						{
-							ball.xDirection = GetRandXDirection();
-						}
-						else //flip ball xdirection
-						{
-							ball.SwapDirection(ball.xDirection);
-						}
-
-						//set ball yDirection to random
-						ball.yDirection = GetRandomYDirection();
-
-						//move ball to center
-						int x = SCREEN_WIDTH / 2;
-						int y = rand() % SCREEN_HEIGHT;
-						//see if ball is above or below the horizontal half line, this is to check if the ball is out of bounds 
-						//to start with
-						if (y < SCREEN_HEIGHT / 2)
-						{
-							if (y < ball.height)
-							{
-								y = ball.height;
-							}
-						}
-						else
-						{
-							if (y > SCREEN_HEIGHT - ball.height)
-							{
-								y = SCREEN_HEIGHT - ball.height;
-							}
-						}
-						ball.SetPosition(x, y);
-						MoveSprite(ball.spriteID, ball.x, ball.y);
-						currentPlayState = ROUND;
-					}
-					else
-					{
-						serveTimer += GetDeltaTime();
-					}
-
-				}
-
+				ServeBall(serveTimer);
 				break;
 			case ROUND:
 				serveTimer = 0.0f;
 				Update();
-				Draw();
+				DrawGame();
 				break;
 			}
-
 
 			break;
 		case HIGH_SCORE:
 			break;
 		case WIN:
-			DrawString("You Win!", SCREEN_WIDTH / 2 - 100.0f, SCREEN_HEIGHT / 2);
+			if (player1.score > player2.score)
+			{
+				winner += " PLAYER 1 !";
+			}
+			else
+			{
+				winner += " PLAYER 2 !";
+			}
+			DrawGameUI();
+			DrawString(winner.c_str(), SCREEN_WIDTH / 2 - 100.0f, SCREEN_HEIGHT / 2);
+			DrawString("<ESC> to return to menu", SCREEN_WIDTH / 2 - 150, 50);
+
+			if (IsKeyDown(ESC_KEYCODE))
+			{
+				currentGameState = MENU;
+				std::cout << "here\n"; 
+			}
 			break;
 		case QUIT:
+			cout << "quit" << endl;
+			quitGame = true;
 			break;
 		}
 
-
-
-	} while (!FrameworkUpdate());
+	} while (!FrameworkUpdate() && !quitGame);
 
 	Shutdown();
 
@@ -408,7 +388,7 @@ int main(int argc, char* argv[])
 
 void InitializeGame()
 {
-	currentGameState = PLAY;
+	currentGameState = MENU;
 	currentPlayState = SERVE;
 
 	InitializePlayers();
@@ -416,12 +396,12 @@ void InitializeGame()
 	InitializeBall();
 }
 
-void Draw()
+void DrawGame()
 {
 	DrawSprite(player1.spriteId);
 	DrawSprite(player2.spriteId);
 	DrawSprite(ball.spriteID);
-	DrawUI();
+	DrawGameUI();
 }
 
 void Update()
@@ -434,7 +414,7 @@ void Update()
 	ball.Update(deltaTime);
 }
 
-void DrawUI()
+void DrawGameUI()
 {
 	drawCenterLine();
 	char player1Score[3];
@@ -531,7 +511,7 @@ DIRECTION GetRandomYDirection()
 {
 	srand(time(nullptr));
 	int dir = rand() % 2 + 2;
-	
+
 	switch (dir)
 	{
 	case 2:
@@ -541,3 +521,84 @@ DIRECTION GetRandomYDirection()
 	}
 }
 
+void ServeBall(float &a_timer)
+{
+	if (player1.score > 10 || player2.score > 10)
+	{
+		currentGameState = WIN;
+	}
+	else
+	{
+		DrawString("Ready!", SCREEN_WIDTH / 2 - 50.0f, SCREEN_HEIGHT / 2);
+		DrawGameUI();
+		if (a_timer > 3.0f)
+		{
+			//set balls xDirection
+			if (player1.score == player2.score)
+			{
+				ball.xDirection = GetRandXDirection();
+			}
+			else //flip ball xdirection
+			{
+				ball.SwapDirection(ball.xDirection);
+			}
+
+			//set ball yDirection to random
+			ball.yDirection = GetRandomYDirection();
+
+			//move ball to center
+			int x = SCREEN_WIDTH / 2;
+			int y = rand() % SCREEN_HEIGHT;
+			//see if ball is above or below the horizontal half line, this is to check if the ball is out of bounds 
+			//to start with
+			if (y < SCREEN_HEIGHT / 2)
+			{
+				if (y < ball.height)
+				{
+					y = ball.height;
+				}
+			}
+			else
+			{
+				if (y > SCREEN_HEIGHT - ball.height)
+				{
+					y = SCREEN_HEIGHT - ball.height;
+				}
+			}
+			ball.SetPosition(x, y);
+			MoveSprite(ball.spriteID, ball.x, ball.y);
+			currentPlayState = ROUND;
+		}
+		else
+		{
+			a_timer += GetDeltaTime();
+		}
+
+	}
+}
+
+void DrawMenu()
+{
+	DrawString(GAME_TITLE, SCREEN_WIDTH / 2 - 100.0f, SCREEN_HEIGHT - 100);
+	DrawString(MENU_TEXT_NEW_GAME, SCREEN_WIDTH / 2 - 150.0f, SCREEN_HEIGHT * .66f);
+	DrawString(MENU_TEXT_HIGH_SCORE, SCREEN_WIDTH / 2 - 150.0f, SCREEN_HEIGHT *.66f - 100);
+	DrawString(MENU_TEXT_QUIT, SCREEN_WIDTH / 2 - 150.0f, SCREEN_HEIGHT *.66f - 200);
+}
+
+void HandleMenuInput()
+{
+	if (IsKeyDown('S'))
+	{
+		currentGameState = PLAY;
+		currentPlayState = SERVE;
+	}
+	if (IsKeyDown('D'))
+	{
+		currentGameState = HIGH_SCORE;
+		//change savestate here when implemented
+	}
+	if (IsKeyDown('Q'))
+	{
+		currentGameState = QUIT;
+	}
+}
