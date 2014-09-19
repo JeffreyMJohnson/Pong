@@ -2,6 +2,9 @@
 #include <iostream>
 #include <time.h>
 #include <string>
+#include <fstream>
+#include <vector>
+#include <algorithm>
 
 using namespace std;
 
@@ -82,7 +85,6 @@ void ServeBall(float &a_timer);
 void DrawMenu();
 
 void HandleMenuInput();
-
 
 DIRECTION GetRandXDirection();
 
@@ -311,8 +313,57 @@ struct Ball
 
 Ball ball;
 
+struct HighScore
+{
+	int score;
+	string name;
+};
+
+bool CompareTest(HighScore a_score1, HighScore a_score2);
+
+class HighScores
+{
+public:
+	//constructor: will init mHighScores from file if any
+	HighScores();
+
+	bool IsHighScore(HighScore &a_HighScore);
+
+	void AddScore(HighScore &a_HighScore);
+
+	void SaveScores();
+
+	string ToString();
+
+
+private:
+	//	const string LOG_FILE_PATH = "Highscores.log";
+	const string LOG_FILE_PATH = "foo.txt"; //TODO: THIS IS FOR DEBUG, REMOVE BEFORE RELEASE
+	//needs to be static for some reason?
+	const static int MAX_CHAR_COUNT = 30;
+
+	const int HIGH_SCORE_COUNT = 5;
+
+	vector<HighScore> mHighScores;
+
+	//sort vector by HighScore.score with highest score in first index
+	void SortList();
+
+	//sort helper function for sorting function in algorithm library
+	//bool SortFunction(HighScore a_score1, HighScore a_score2);
+
+	//load mHighScores vector with data from file if any.
+	void ParseFile();
+
+
+};
+
+
+
 int main(int argc, char* argv[])
 {
+	
+
 	bool quitGame = false;
 	Initialise(SCREEN_WIDTH, SCREEN_HEIGHT, false, GAME_TITLE);
 
@@ -604,4 +655,166 @@ void HandleMenuInput()
 	{
 		currentGameState = QUIT;
 	}
+}
+
+HighScores::HighScores()
+{
+	ParseFile();
+}
+
+void HighScores::ParseFile()
+{
+	fstream file;
+	file.open(LOG_FILE_PATH, ios::in);
+
+	//buffer for line of data to parse
+	char buffer[MAX_CHAR_COUNT];
+
+	//set loop for max num of highscores allowed, will break if less than that present;
+	//CHANGE::maybe a while loop would be better here, using isFileEnd flag;
+	for (int i = 0; i < HIGH_SCORE_COUNT; i++)
+	{
+		file.getline(buffer, MAX_CHAR_COUNT);
+		HighScore score;
+		//convert to string for functionality
+		string line = string(buffer);
+
+		//cout << "line: " << line << endl;
+
+		if (line.size() != 0)
+		{
+
+			int delimPos = line.find(',');
+			//not sure if second param is inclusive or exclusive. might have to subtract 1 if stoi() exceptions
+			score.score = stoi(line.substr(0, delimPos));
+
+			//assuming starting char is inclusive so added 1.
+			score.name = line.substr(delimPos + 1, string::npos);
+
+			mHighScores.push_back(score);
+		}
+		else
+		{
+			/*cout << "end of file reached\n";
+			cout << "size: " << line.size() << endl;*/
+			break;
+		}
+	}
+
+	file.close();
+
+}
+
+string HighScores::ToString()
+{
+	string result;
+	//cout << "Score List\n";
+	//cout << "SCORE\tNAME\n";
+
+	result.append("***********************************\n");
+	result.append("\tScore List\n");
+	result.append("***********************************\n");
+	result.append("SCORE\tNAME\n\n");
+
+	for (int i = 0; i < mHighScores.size(); i++)
+	{
+		int score = mHighScores[i].score;
+		string name = mHighScores[i].name;
+
+		//result.append("Score: ");
+		result.append(to_string(mHighScores[i].score));
+		//result.append("\nName: ");
+		result.append("\t");
+		result.append(mHighScores[i].name);
+		result.append("\n\n");
+	}
+	result.append("***********************************\n");
+	return result;
+}
+
+//mut be global function for some unknown reason to myself
+bool CompareTest(HighScore a_score1, HighScore a_score2)
+{
+	return a_score1.score > a_score2.score;
+}
+
+
+//return true if first HighScore.score is greater than second HighScore.score. Returns false otherwise. 
+//This sorts HighScore list in descending order.
+//bool HighScores::SortFunction(HighScore a_score1, HighScore a_score2)
+//{
+//	return a_score1.score > a_score2.score;
+//}
+
+void HighScores::SortList()
+{
+	cout << ToString();
+	cout << "sort list\n";
+	sort(mHighScores.begin(), mHighScores.end(), CompareTest);
+	cout << ToString();
+}
+
+//adds score if a_HighScore param score value is higher than any score value in current list.  If so, will insert a_HighScore into list
+//in appropriate place (sorted descending) moving the rest one step towards list end and removing the last entry which is the smallest value
+void HighScores::AddScore(HighScore &a_HighScore)
+{
+	if (mHighScores.size() == 0)
+	{
+		//know it's highest score because it's first entry so add it and return
+		mHighScores.push_back(a_HighScore);
+		return;
+	}
+
+	//at least one entry in list so check to find insert pos
+	//need to be iterator because insert() requires.
+	vector<HighScore>::iterator insertLocation = mHighScores.end();
+
+	//search for highscore less than current score.
+	for (vector<HighScore>::iterator it = mHighScores.begin(); it != mHighScores.end(); it++)
+	{
+		//if the list is less than max and the value is equal to a value than that's the insert location
+		if (a_HighScore.score > it->score || (a_HighScore.score == it->score && mHighScores.size() < HIGH_SCORE_COUNT))
+		{
+			//found one so note place in vector
+			insertLocation = it;
+			//must break out of loop. once a smaller value is found, all others will be as well.
+			break;
+		}
+		//the list size still isn't filled and the value is lower than others so will be inserted last pos
+		else if (mHighScores.size() < HIGH_SCORE_COUNT)
+		{
+			mHighScores.push_back(a_HighScore);
+			return;
+		}
+	}
+
+	//might not be a valid highscore so check if still end() value;
+	if (insertLocation != mHighScores.end())
+	{
+		//insert current score into highscores vector in appropriate place
+		mHighScores.insert(insertLocation, a_HighScore);
+
+		//vector might not be filled with high scores yet.
+		if (mHighScores.size() > HIGH_SCORE_COUNT){
+			//insert() moves everything down a place in vector, so now has too many entries. need to remove final entry
+			mHighScores.erase(mHighScores.end() - 1);
+		}
+	}
+	else //TODO: DEBUG ONLY REMOVE THIS AND THE NEXT LINE FOR RELEASE
+		cout << "Score not high enough for HighScores list\n";
+}
+
+void HighScores::SaveScores()
+{
+	fstream file;
+	file.open(LOG_FILE_PATH, ios::out);
+	for (int i = 0; i < mHighScores.size(); i++)
+	{
+		file << mHighScores[i].score << ',' << mHighScores[i].name << endl;
+	}
+	//put empty line at end to help parsing
+	file << '\n';
+	file.flush();
+	file.close();
+
 }
