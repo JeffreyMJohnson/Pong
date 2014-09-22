@@ -1,4 +1,21 @@
-﻿#include "AIE.h"
+﻿/*
+PONG DONG
+A game by Jeffrey M Johnson
+jeffrey.johnson@aie.edu.au
+
+
+This game created for assessment of my abilities working towards Advanced Diploma in Professional Game Development - Programming
+course.
+
+
+Pong is a game played by 2 players. Each player controls a paddle, player 1 (the left side) is controlled by the 'w' and 'x' keys
+and player 2 (right side) is controlled by the '[' and '/' keys. When loaded a menu is shown, press 'n' key to begin playing a new 
+game, press 'h' key to see the highest score gotten so far on this machine, and press 'q' to quit the game and close the program.  
+The game is won by a player getting at least 11 points AND having more than 2 points greater than their opponent.
+*/
+
+
+#include "AIE.h"
 #include <iostream>
 #include <time.h>
 #include <string>
