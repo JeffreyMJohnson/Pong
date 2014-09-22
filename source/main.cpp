@@ -45,7 +45,7 @@ const char* MENU_TEXT_NEW_GAME = "(S)tart a New Game";
 const char* MENU_TEXT_HIGH_SCORE = "(D)isplay High Scores";
 const char* MENU_TEXT_QUIT = "(Q)uit Game";
 
-
+//used for ball updeate
 enum DIRECTION
 {
 	LEFT,
@@ -73,32 +73,47 @@ enum PLAY_STATE
 
 PLAY_STATE currentPlayState;
 
+//general initialization of game objects.
 void InitializeGame();
 
+//update all game objects per frame cycle
 void Update();
 
+//draw all game objects per frame cycle
 void DrawGame();
 
+//initialize the 2 player objects
 void InitializePlayers();
 
+//draw the scores, and center line of the game court per every frame
 void DrawGameUI();
 
+//refactored function because the line is a qty of lines next to eachother so done programtically here
 void drawCenterLine();
 
+//initialize the ball object 
 void InitializeBall();
 
+//check if game is won and if not compute ball location and direction to start the round and change playstate to round. If the game winning criteria is 
+//true changes state to win.
 void ServeBall(float &a_timer);
 
+//draw the game menu per frame 
 void DrawMenu();
 
+//function to handle the input keys for the menu game state
 void HandleMenuInput();
 
+//initialize the highscore variable with value from text file. this is done during game initialization
 void LoadHighScore();
 
+//output value of highscore variable to text file. This is done during cleanup before quitting app.
 void WriteHighScore();
 
+//compute and return random direction enum on x-axis (e.g. RIGHT, LEFT)
 DIRECTION GetRandXDirection();
 
+//compute and return random direction enum on y-axis (e.g. UP, DOWN)
 DIRECTION GetRandomYDirection();
 
 struct Player
@@ -170,8 +185,6 @@ struct Player
 
 Player player1;
 Player player2;
-
-
 
 struct Ball
 {
@@ -376,20 +389,20 @@ int main(int argc, char* argv[])
 		case HIGH_SCORE:
 			
 			DrawString("HIGH SCORE", SCREEN_WIDTH / 2 - 100.0f, SCREEN_HEIGHT * 0.75f);
-			char buff[30];
+			char buff[30];//itoa requires a char buffer for param but it's not used because itoa returns char* as well
 			DrawString(itoa(mHighScore, buff, 10), SCREEN_WIDTH/2 - 25, SCREEN_HEIGHT *0.66f);	
 			DrawString("<ESC> to return to menu", SCREEN_WIDTH / 2 - 150, 50);
 
 			if (IsKeyDown(ESC_KEYCODE))
 			{
 				currentGameState = MENU;
-				std::cout << "here\n";
 			}
 			break;
 		case WIN:
 			if (player1.score > player2.score)
 			{
 				winner += " PLAYER 1 !";
+				//the isHighScore flag is used to keep the string drawn each frame after setting the highscore variable
 				if (isHighScore || player1.score > mHighScore)
 				{
 					DrawString("You are the  new High Score!", SCREEN_WIDTH / 2 - 155.f, SCREEN_HEIGHT * 0.66f);
@@ -400,6 +413,7 @@ int main(int argc, char* argv[])
 			else
 			{
 				winner += " PLAYER 2 !";
+				//the isHighScore flag is used to keep the string drawn each frame after setting the highscore variable
 				if (isHighScore || player2.score > mHighScore)
 				{
 					DrawString("You are the  new High Score!", SCREEN_WIDTH / 2 - 155.f, SCREEN_HEIGHT * 0.66f);
@@ -407,8 +421,13 @@ int main(int argc, char* argv[])
 					isHighScore = true;
 				}
 			}
+			//keep the game ui at last state drawing each frame
 			DrawGameUI();
+
+			//draw the concatenated win string
 			DrawString(winner.c_str(), SCREEN_WIDTH / 2 - 100.0f, SCREEN_HEIGHT / 2);
+
+			//using key handler to pause the screen in this state until user decides
 			DrawString("<ESC> to return to menu", SCREEN_WIDTH / 2 - 150, 50);
 
 			if (IsKeyDown(ESC_KEYCODE))
@@ -418,8 +437,8 @@ int main(int argc, char* argv[])
 			}
 			break;
 		case QUIT:
-			cout << "quit" << endl;
 			WriteHighScore();
+			//this flag necessary to break out of loop
 			quitGame = true;
 			break;
 		}
