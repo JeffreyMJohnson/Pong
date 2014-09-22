@@ -8,6 +8,10 @@
 
 using namespace std;
 
+//magic numbers to adjust for debug / assesment 
+const float SERVING_TIME_DELAY = 2.0f;
+const int MIN_SCORE_FOR_WIN = 10;
+
 
 const int SCREEN_WIDTH = 1024;
 const int SCREEN_HEIGHT = 768;
@@ -27,13 +31,16 @@ const float BALL_SPEED = 200.0f;
 const float BALL_WIDTH = PLAYER_WIDTH;
 const float BALL_HEIGHT = 25;
 const int ESC_KEYCODE = 256;
-const float SERVING_TIME_DELAY = 2.0f;
+const int MAX_CHAR_COUNT = 30;
 
+
+const char* PLAYER1_SCORE = "0";
+const char* PLAYER2_SCORE = "0";
 const char* GAME_TITLE = "Pong Dong";
 const char* PLAYER_IMAGE_LOCATION = "./images/pong_paddle.png";
 const char* FONT_PATH = "./fonts/invaders.fnt";
-const char* PLAYER1_SCORE = "0";
-const char* PLAYER2_SCORE = "0";
+const string LOG_FILE_PATH = "Highscore.data";
+
 const char* MENU_TEXT_NEW_GAME = "(S)tart a New Game";
 const char* MENU_TEXT_HIGH_SCORE = "(D)isplay High Scores";
 const char* MENU_TEXT_QUIT = "(Q)uit Game";
@@ -85,6 +92,10 @@ void ServeBall(float &a_timer);
 void DrawMenu();
 
 void HandleMenuInput();
+
+void LoadHighScore();
+
+void WriteHighScore();
 
 DIRECTION GetRandXDirection();
 
@@ -153,10 +164,7 @@ struct Player
 
 	void GetScore(char* a_result)
 	{
-		//char result[3];
 		itoa(score, a_result, 10);
-		//std::cout << a_result << std::endl;
-		//return result;
 	}
 };
 
@@ -313,68 +321,27 @@ struct Ball
 
 Ball ball;
 
-struct HighScore
-{
-	int score;
-	string name;
-};
-
-bool CompareTest(HighScore a_score1, HighScore a_score2);
-
-class HighScores
-{
-public:
-	//constructor: will init mHighScores from file if any
-	HighScores();
-
-	bool IsHighScore(HighScore &a_HighScore);
-
-	void AddScore(HighScore &a_HighScore);
-
-	void SaveScores();
-
-	string ToString();
-
-
-private:
-	//	const string LOG_FILE_PATH = "Highscores.log";
-	const string LOG_FILE_PATH = "foo.txt"; //TODO: THIS IS FOR DEBUG, REMOVE BEFORE RELEASE
-	//needs to be static for some reason?
-	const static int MAX_CHAR_COUNT = 30;
-
-	const int HIGH_SCORE_COUNT = 5;
-
-	vector<HighScore> mHighScores;
-
-	//sort vector by HighScore.score with highest score in first index
-	void SortList();
-
-	//sort helper function for sorting function in algorithm library
-	//bool SortFunction(HighScore a_score1, HighScore a_score2);
-
-	//load mHighScores vector with data from file if any.
-	void ParseFile();
-
-
-};
-
-
+int mHighScore;
 
 int main(int argc, char* argv[])
 {
-	
-
+	//flag to leave loop when want to quit app
 	bool quitGame = false;
+
+	//used as flag to keep writing high score text during loop	in WIN gamestate
+	bool isHighScore = false;
+
 	Initialise(SCREEN_WIDTH, SCREEN_HEIGHT, false, GAME_TITLE);
 
 	SetBackgroundColour(SColour(0, 0, 0, 255));
 
+	//using 8-bit style font from space invaders exercise
 	AddFont(FONT_PATH);
-
 
 	//variable for pausing the serve screen
 	float serveTimer = 0.0f;
 
+	//setup players, ball and variables
 	InitializeGame();
 
 	//Game Loop
@@ -383,7 +350,8 @@ int main(int argc, char* argv[])
 		ClearScreen();
 		SetFont(FONT_PATH);
 		string winner = "YOU WIN ";
-		//implement gamestates
+		
+		
 		switch (currentGameState)
 		{
 		case MENU:
@@ -391,10 +359,11 @@ int main(int argc, char* argv[])
 			HandleMenuInput();
 			break;
 		case PLAY:
-			//implement play states
 			switch (currentPlayState)
 			{
 			case SERVE:
+				//reset the flag because new game is starting
+				isHighScore = false;
 				ServeBall(serveTimer);
 				break;
 			case ROUND:
@@ -403,18 +372,40 @@ int main(int argc, char* argv[])
 				DrawGame();
 				break;
 			}
-
 			break;
 		case HIGH_SCORE:
+			
+			DrawString("HIGH SCORE", SCREEN_WIDTH / 2 - 100.0f, SCREEN_HEIGHT * 0.75f);
+			char buff[30];
+			DrawString(itoa(mHighScore, buff, 10), SCREEN_WIDTH/2 - 25, SCREEN_HEIGHT *0.66f);	
+			DrawString("<ESC> to return to menu", SCREEN_WIDTH / 2 - 150, 50);
+
+			if (IsKeyDown(ESC_KEYCODE))
+			{
+				currentGameState = MENU;
+				std::cout << "here\n";
+			}
 			break;
 		case WIN:
 			if (player1.score > player2.score)
 			{
 				winner += " PLAYER 1 !";
+				if (isHighScore || player1.score > mHighScore)
+				{
+					DrawString("You are the  new High Score!", SCREEN_WIDTH / 2 - 155.f, SCREEN_HEIGHT * 0.66f);
+					mHighScore = player1.score;
+					isHighScore = true;
+				}
 			}
 			else
 			{
 				winner += " PLAYER 2 !";
+				if (isHighScore || player2.score > mHighScore)
+				{
+					DrawString("You are the  new High Score!", SCREEN_WIDTH / 2 - 155.f, SCREEN_HEIGHT * 0.66f);
+					mHighScore = player2.score;
+					isHighScore = true;
+				}
 			}
 			DrawGameUI();
 			DrawString(winner.c_str(), SCREEN_WIDTH / 2 - 100.0f, SCREEN_HEIGHT / 2);
@@ -423,11 +414,12 @@ int main(int argc, char* argv[])
 			if (IsKeyDown(ESC_KEYCODE))
 			{
 				currentGameState = MENU;
-				std::cout << "here\n"; 
+				std::cout << "here\n";
 			}
 			break;
 		case QUIT:
 			cout << "quit" << endl;
+			WriteHighScore();
 			quitGame = true;
 			break;
 		}
@@ -448,6 +440,8 @@ void InitializeGame()
 	InitializePlayers();
 
 	InitializeBall();
+
+	LoadHighScore();
 }
 
 void DrawGame()
@@ -505,7 +499,8 @@ void InitializePlayers()
 
 	//set up to numpad 8 (328)
 	//set down to numpad 2 (322)
-	player2.SetMoveKeys(328, 322);
+	//player2.SetMoveKeys(328, 322);
+	player2.SetMoveKeys('[', '/'); //changed keys so can use on keyboard w/no numpad
 	player2.speed = PLAYER_SPEED;
 	player2.spriteId = CreateSprite(PLAYER_IMAGE_LOCATION, player2.width, player2.height, true);
 	player2.SetPosition(PLAYER2_XPOS, PLAYER2_YPOS);
@@ -537,7 +532,6 @@ void InitializeBall()
 		}
 	}
 	ball.SetPosition(x, y);
-	//std::cout << "x: " << x << "\ny: " << y << std::endl;
 
 	//get random directions
 
@@ -577,7 +571,9 @@ DIRECTION GetRandomYDirection()
 
 void ServeBall(float &a_timer)
 {
-	if (player1.score > 10 || player2.score > 10)
+	//implemented player msut have winning point at least 2 more than opponent to make high score be sensical
+	if ((player1.score > MIN_SCORE_FOR_WIN && player1.score > player2.score + 1) ||
+		(player2.score > MIN_SCORE_FOR_WIN && player2.score > player1.score + 1))
 	{
 		currentGameState = WIN;
 	}
@@ -657,164 +653,26 @@ void HandleMenuInput()
 	}
 }
 
-HighScores::HighScores()
-{
-	ParseFile();
-}
 
-void HighScores::ParseFile()
+void LoadHighScore()
 {
 	fstream file;
 	file.open(LOG_FILE_PATH, ios::in);
 
 	//buffer for line of data to parse
 	char buffer[MAX_CHAR_COUNT];
-
-	//set loop for max num of highscores allowed, will break if less than that present;
-	//CHANGE::maybe a while loop would be better here, using isFileEnd flag;
-	for (int i = 0; i < HIGH_SCORE_COUNT; i++)
-	{
-		file.getline(buffer, MAX_CHAR_COUNT);
-		HighScore score;
-		//convert to string for functionality
-		string line = string(buffer);
-
-		//cout << "line: " << line << endl;
-
-		if (line.size() != 0)
-		{
-
-			int delimPos = line.find(',');
-			//not sure if second param is inclusive or exclusive. might have to subtract 1 if stoi() exceptions
-			score.score = stoi(line.substr(0, delimPos));
-
-			//assuming starting char is inclusive so added 1.
-			score.name = line.substr(delimPos + 1, string::npos);
-
-			mHighScores.push_back(score);
-		}
-		else
-		{
-			/*cout << "end of file reached\n";
-			cout << "size: " << line.size() << endl;*/
-			break;
-		}
-	}
-
+	file.getline(buffer, MAX_CHAR_COUNT);
+	mHighScore = atoi(buffer);
 	file.close();
-
 }
 
-string HighScores::ToString()
-{
-	string result;
-	//cout << "Score List\n";
-	//cout << "SCORE\tNAME\n";
-
-	result.append("***********************************\n");
-	result.append("\tScore List\n");
-	result.append("***********************************\n");
-	result.append("SCORE\tNAME\n\n");
-
-	for (int i = 0; i < mHighScores.size(); i++)
-	{
-		int score = mHighScores[i].score;
-		string name = mHighScores[i].name;
-
-		//result.append("Score: ");
-		result.append(to_string(mHighScores[i].score));
-		//result.append("\nName: ");
-		result.append("\t");
-		result.append(mHighScores[i].name);
-		result.append("\n\n");
-	}
-	result.append("***********************************\n");
-	return result;
-}
-
-//mut be global function for some unknown reason to myself
-bool CompareTest(HighScore a_score1, HighScore a_score2)
-{
-	return a_score1.score > a_score2.score;
-}
-
-
-//return true if first HighScore.score is greater than second HighScore.score. Returns false otherwise. 
-//This sorts HighScore list in descending order.
-//bool HighScores::SortFunction(HighScore a_score1, HighScore a_score2)
-//{
-//	return a_score1.score > a_score2.score;
-//}
-
-void HighScores::SortList()
-{
-	cout << ToString();
-	cout << "sort list\n";
-	sort(mHighScores.begin(), mHighScores.end(), CompareTest);
-	cout << ToString();
-}
-
-//adds score if a_HighScore param score value is higher than any score value in current list.  If so, will insert a_HighScore into list
-//in appropriate place (sorted descending) moving the rest one step towards list end and removing the last entry which is the smallest value
-void HighScores::AddScore(HighScore &a_HighScore)
-{
-	if (mHighScores.size() == 0)
-	{
-		//know it's highest score because it's first entry so add it and return
-		mHighScores.push_back(a_HighScore);
-		return;
-	}
-
-	//at least one entry in list so check to find insert pos
-	//need to be iterator because insert() requires.
-	vector<HighScore>::iterator insertLocation = mHighScores.end();
-
-	//search for highscore less than current score.
-	for (vector<HighScore>::iterator it = mHighScores.begin(); it != mHighScores.end(); it++)
-	{
-		//if the list is less than max and the value is equal to a value than that's the insert location
-		if (a_HighScore.score > it->score || (a_HighScore.score == it->score && mHighScores.size() < HIGH_SCORE_COUNT))
-		{
-			//found one so note place in vector
-			insertLocation = it;
-			//must break out of loop. once a smaller value is found, all others will be as well.
-			break;
-		}
-		//the list size still isn't filled and the value is lower than others so will be inserted last pos
-		else if (mHighScores.size() < HIGH_SCORE_COUNT)
-		{
-			mHighScores.push_back(a_HighScore);
-			return;
-		}
-	}
-
-	//might not be a valid highscore so check if still end() value;
-	if (insertLocation != mHighScores.end())
-	{
-		//insert current score into highscores vector in appropriate place
-		mHighScores.insert(insertLocation, a_HighScore);
-
-		//vector might not be filled with high scores yet.
-		if (mHighScores.size() > HIGH_SCORE_COUNT){
-			//insert() moves everything down a place in vector, so now has too many entries. need to remove final entry
-			mHighScores.erase(mHighScores.end() - 1);
-		}
-	}
-	else //TODO: DEBUG ONLY REMOVE THIS AND THE NEXT LINE FOR RELEASE
-		cout << "Score not high enough for HighScores list\n";
-}
-
-void HighScores::SaveScores()
+void WriteHighScore()
 {
 	fstream file;
 	file.open(LOG_FILE_PATH, ios::out);
-	for (int i = 0; i < mHighScores.size(); i++)
-	{
-		file << mHighScores[i].score << ',' << mHighScores[i].name << endl;
-	}
-	//put empty line at end to help parsing
-	file << '\n';
-	file.flush();
+	file << mHighScore;
 	file.close();
-
 }
+
+
+
