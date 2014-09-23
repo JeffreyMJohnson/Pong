@@ -106,7 +106,7 @@ void InitializePlayers();
 void DrawGameUI();
 
 //refactored function because the line is a qty of lines next to eachother so done programtically here
-void drawCenterLine();
+void DrawCenterLine();
 
 //initialize the ball object 
 void InitializeBall();
@@ -500,7 +500,7 @@ void Update()
 
 void DrawGameUI()
 {
-	drawCenterLine();
+	DrawCenterLine();
 	char player1Score[3];
 	char player2Score[3];
 	player1.GetScore(player1Score);
@@ -509,7 +509,7 @@ void DrawGameUI()
 	DrawString(player2Score, PLAYER2_SCORE_POSX, PLAYER2_SCORE_POSY);
 }
 
-void drawCenterLine()
+void DrawCenterLine()
 {
 	DrawLine(SCREEN_WIDTH / 2, SCREEN_HEIGHT, SCREEN_WIDTH / 2, 0);
 	for (int i = 0; i < CENTER_LINE_WIDTH; i++)
@@ -607,7 +607,7 @@ DIRECTION GetRandomYDirection()
 
 void ServeBall(float &a_timer)
 {
-	//implemented player msut have winning point at least 2 more than opponent to make high score be sensical
+	//implemented player must have winning point at least 2 more than opponent to make high score be sensical
 	if ((player1.score > MIN_SCORE_FOR_WIN && player1.score > player2.score + 1) ||
 		(player2.score > MIN_SCORE_FOR_WIN && player2.score > player1.score + 1))
 	{
@@ -620,7 +620,7 @@ void ServeBall(float &a_timer)
 		if (a_timer > SERVING_TIME_DELAY)
 		{
 			//set balls xDirection
-			if (player1.score == player2.score)
+			if (player1.score == 0 && player2.score == 0)
 			{
 				ball.xDirection = GetRandXDirection();
 			}
