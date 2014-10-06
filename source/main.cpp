@@ -54,16 +54,16 @@ enum DIRECTION
 	DOWN
 };
 
-enum GAMESTATE
-{
-	MENU,
-	PLAY,
-	HIGH_SCORE,
-	WIN,
-	QUIT
-};
+//enum GAMESTATE
+//{
+//	MENU,
+//	PLAY,
+//	HIGH_SCORE,
+//	WIN,
+//	QUIT
+//};
 
-GAMESTATE currentGameState;
+//GAMESTATE currentGameState;
 
 enum PLAY_STATE
 {
@@ -336,14 +336,31 @@ Ball ball;
 
 int mHighScore;
 
+//function pointer
+void(*GameStateFunction)() = nullptr;
+
+void MainMenu();
+
+void HighScoreMenu();
+
+void GamePlayMenu();
+
+void WinMenu();
+
+void QuitMenu();
+
+//flag to leave loop when want to quit app
+bool quitGame = false;
+
+//variable for pausing the serve screen
+float serveTimer = 0.0f;
+
+//used as flag to keep writing high score text during loop	in WIN gamestate
+bool isHighScore = false;
+
+string winner = "YOU WIN ";
 int main(int argc, char* argv[])
 {
-	//flag to leave loop when want to quit app
-	bool quitGame = false;
-
-	//used as flag to keep writing high score text during loop	in WIN gamestate
-	bool isHighScore = false;
-
 	Initialise(SCREEN_WIDTH, SCREEN_HEIGHT, false, GAME_TITLE);
 
 	SetBackgroundColour(SColour(0, 0, 0, 255));
@@ -351,97 +368,17 @@ int main(int argc, char* argv[])
 	//using 8-bit style font from space invaders exercise
 	AddFont(FONT_PATH);
 
-	//variable for pausing the serve screen
-	float serveTimer = 0.0f;
-
 	//setup players, ball and variables
 	InitializeGame();
+
+	GameStateFunction = MainMenu;
 
 	//Game Loop
 	do
 	{
 		ClearScreen();
 		SetFont(FONT_PATH);
-		string winner = "YOU WIN ";
-		
-		
-		switch (currentGameState)
-		{
-		case MENU:
-			DrawMenu();
-			HandleMenuInput();
-			break;
-		case PLAY:
-			switch (currentPlayState)
-			{
-			case SERVE:
-				//reset the flag because new game is starting
-				isHighScore = false;
-				ServeBall(serveTimer);
-				break;
-			case ROUND:
-				serveTimer = 0.0f;
-				Update();
-				DrawGame();
-				break;
-			}
-			break;
-		case HIGH_SCORE:
-			
-			DrawString("HIGH SCORE", SCREEN_WIDTH / 2 - 100.0f, SCREEN_HEIGHT * 0.75f);
-			char buff[30];//itoa requires a char buffer for param but it's not used because itoa returns char* as well
-			DrawString(itoa(mHighScore, buff, 10), SCREEN_WIDTH/2 - 25, SCREEN_HEIGHT *0.66f);	
-			DrawString("<ESC> to return to menu", SCREEN_WIDTH / 2 - 150, 50);
-
-			if (IsKeyDown(ESC_KEYCODE))
-			{
-				currentGameState = MENU;
-			}
-			break;
-		case WIN:
-			if (player1.score > player2.score)
-			{
-				winner += " PLAYER 1 !";
-				//the isHighScore flag is used to keep the string drawn each frame after setting the highscore variable
-				if (isHighScore || player1.score > mHighScore)
-				{
-					DrawString("You are the  new High Score!", SCREEN_WIDTH / 2 - 155.f, SCREEN_HEIGHT * 0.66f);
-					mHighScore = player1.score;
-					isHighScore = true;
-				}
-			}
-			else
-			{
-				winner += " PLAYER 2 !";
-				//the isHighScore flag is used to keep the string drawn each frame after setting the highscore variable
-				if (isHighScore || player2.score > mHighScore)
-				{
-					DrawString("You are the  new High Score!", SCREEN_WIDTH / 2 - 155.f, SCREEN_HEIGHT * 0.66f);
-					mHighScore = player2.score;
-					isHighScore = true;
-				}
-			}
-			//keep the game ui at last state drawing each frame
-			DrawGameUI();
-
-			//draw the concatenated win string
-			DrawString(winner.c_str(), SCREEN_WIDTH / 2 - 100.0f, SCREEN_HEIGHT / 2);
-
-			//using key handler to pause the screen in this state until user decides
-			DrawString("<ESC> to return to menu", SCREEN_WIDTH / 2 - 150, 50);
-
-			if (IsKeyDown(ESC_KEYCODE))
-			{
-				currentGameState = MENU;
-				std::cout << "here\n";
-			}
-			break;
-		case QUIT:
-			WriteHighScore();
-			//this flag necessary to break out of loop
-			quitGame = true;
-			break;
-		}
+		GameStateFunction();
 
 	} while (!FrameworkUpdate() && !quitGame);
 
@@ -450,10 +387,94 @@ int main(int argc, char* argv[])
 	return 0;
 }
 
+void MainMenu()
+{
+	DrawMenu();
+	HandleMenuInput();
+}
+
+void HighScoreMenu()
+{
+	DrawString("HIGH SCORE", SCREEN_WIDTH / 2 - 100.0f, SCREEN_HEIGHT * 0.75f);
+	char buff[30];//itoa requires a char buffer for param but it's not used because itoa returns char* as well
+	DrawString(itoa(mHighScore, buff, 10), SCREEN_WIDTH / 2 - 25, SCREEN_HEIGHT *0.66f);
+	DrawString("<ESC> to return to menu", SCREEN_WIDTH / 2 - 150, 50);
+
+	if (IsKeyDown(ESC_KEYCODE))
+	{
+		//currentGameState = MENU;
+		GameStateFunction = MainMenu;
+	}
+}
+
+void GamePlayMenu()
+{
+	switch (currentPlayState)
+	{
+	case SERVE:
+		//reset the flag because new game is starting
+		isHighScore = false;
+		ServeBall(serveTimer);
+		break;
+	case ROUND:
+		serveTimer = 0.0f;
+		Update();
+		DrawGame();
+		break;
+	}
+}
+
+void WinMenu()
+{
+	if (player1.score > player2.score)
+	{
+		winner += " PLAYER 1 !";
+		//the isHighScore flag is used to keep the string drawn each frame after setting the highscore variable
+		if (isHighScore || player1.score > mHighScore)
+		{
+			DrawString("You are the  new High Score!", SCREEN_WIDTH / 2 - 155.f, SCREEN_HEIGHT * 0.66f);
+			mHighScore = player1.score;
+			isHighScore = true;
+		}
+	}
+	else
+	{
+		winner += " PLAYER 2 !";
+		//the isHighScore flag is used to keep the string drawn each frame after setting the highscore variable
+		if (isHighScore || player2.score > mHighScore)
+		{
+			DrawString("You are the  new High Score!", SCREEN_WIDTH / 2 - 155.f, SCREEN_HEIGHT * 0.66f);
+			mHighScore = player2.score;
+			isHighScore = true;
+		}
+	}
+	//keep the game ui at last state drawing each frame
+	DrawGameUI();
+
+	//draw the concatenated win string
+	DrawString(winner.c_str(), SCREEN_WIDTH / 2 - 100.0f, SCREEN_HEIGHT / 2);
+
+	//using key handler to pause the screen in this state until user decides
+	DrawString("<ESC> to return to menu", SCREEN_WIDTH / 2 - 150, 50);
+
+	if (IsKeyDown(ESC_KEYCODE))
+	{
+		//currentGameState = MENU;
+		GameStateFunction = MainMenu;
+	}
+}
+
+void QuitMenu()
+{
+	WriteHighScore();
+	//this flag necessary to break out of loop
+	quitGame = true;
+}
 
 void InitializeGame()
 {
-	currentGameState = MENU;
+	//currentGameState = MENU;
+	GameStateFunction = MainMenu;
 	currentPlayState = SERVE;
 
 	InitializePlayers();
@@ -594,7 +615,8 @@ void ServeBall(float &a_timer)
 	if ((player1.score > MIN_SCORE_FOR_WIN && player1.score > player2.score + 1) ||
 		(player2.score > MIN_SCORE_FOR_WIN && player2.score > player1.score + 1))
 	{
-		currentGameState = WIN;
+		//currentGameState = WIN;
+		GameStateFunction = &WinMenu;
 	}
 	else
 	{
@@ -658,17 +680,20 @@ void HandleMenuInput()
 {
 	if (IsKeyDown('S'))
 	{
-		currentGameState = PLAY;
+		//currentGameState = PLAY;
+		GameStateFunction = GamePlayMenu;
 		currentPlayState = SERVE;
 	}
 	if (IsKeyDown('D'))
 	{
-		currentGameState = HIGH_SCORE;
+		//currentGameState = HIGH_SCORE;
+		GameStateFunction = HighScoreMenu;
 		//change savestate here when implemented
 	}
 	if (IsKeyDown('Q'))
 	{
-		currentGameState = QUIT;
+		//currentGameState = QUIT;
+		GameStateFunction = &QuitMenu;
 	}
 }
 
